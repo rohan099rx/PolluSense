@@ -1,0 +1,16 @@
+data:
+  raw_dir: /Users/admin/Downloads/Data_SIH_2025
+  processed_out: /Users/admin/Developer/PolluSense/data/processed.parquet
+model:
+  target_vars: ["O3_surface", "NO2_surface"]
+  lags_hours: [1, 2, 3, 6, 12, 24]
+  rolling_hours: [3, 6, 12]
+  train_test_split_date: "2024-10-01T00:00:00"
+  lightgbm:
+    num_boost_round: 1000
+    early_stopping_rounds: 50
+    params:
+      objective: regression
+      metric: l2
+      learning_rate: 0.05
+      num_leaves: 31

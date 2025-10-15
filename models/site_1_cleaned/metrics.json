@@ -1,0 +1,16 @@
+{
+  "O3_target": {
+    "rmse": 3.96,
+    "mae": 1.55,
+    "bias": 0.032,
+    "r2": 0.977,
+    "correlation": 0.988
+  },
+  "NO2_target": {
+    "rmse": 6.49,
+    "mae": 3.77,
+    "bias": -0.147,
+    "r2": 0.942,
+    "correlation": 0.971
+  }
+}

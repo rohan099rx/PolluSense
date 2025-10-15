@@ -63,8 +63,40 @@ def compute_forecast(_models_bundle, history_df, start_ts, steps, features):
     # use leading-underscore for models bundle so Streamlit doesn't attempt to hash it
     hist = history_df.copy()
     start_ts = pd.to_datetime(start_ts)
+    
+    # If start_ts is beyond the history, we need to extend the history
+    last_hist_date = hist.index[-1]
+    if start_ts > last_hist_date:
+        # Calculate how many hours to extend
+        hours_to_extend = int((start_ts - last_hist_date).total_seconds() / 3600)
+        
+        # Extend history by repeating the last 168 hours (1 week) pattern cyclically
+        # This is a simple approach - you could also use seasonal averages
+        pattern_length = min(168, len(hist))  # Use last week as pattern
+        pattern = hist.iloc[-pattern_length:].copy()
+        
+        # Create extended rows
+        extended_rows = []
+        for i in range(hours_to_extend):
+            new_idx = last_hist_date + pd.Timedelta(hours=i+1)
+            # Use cyclic pattern
+            pattern_idx = i % pattern_length
+            new_row = pattern.iloc[pattern_idx].copy()
+            new_row.name = new_idx
+            extended_rows.append(new_row)
+        
+        # Append extended data
+        if extended_rows:
+            extended_df = pd.DataFrame(extended_rows)
+            hist = pd.concat([hist, extended_df])
+            # Recalculate lag features after extension
+            from src.site_pipeline import add_past_target_features
+            hist = add_past_target_features(hist, ['O3_target', 'NO2_target'])
+    
+    # Now ensure start_ts is in history
     if start_ts not in hist.index:
         hist = hist[hist.index <= start_ts]
+    
     preds = recursive_forecast(_models_bundle, hist, steps, features)
     rows = []
     for idx, row in preds:
@@ -163,6 +195,14 @@ else:
 
 st.sidebar.markdown('---')
 st.sidebar.header('⚙️ Forecast Controls')
+
+# Get training data date range info
+hist_df_temp = load_history_parquet(train_csv)
+train_start = hist_df_temp.index[0]
+train_end = hist_df_temp.index[-1]
+
+st.sidebar.info(f'📊 Training data: {train_start.strftime("%Y-%m-%d")} to {train_end.strftime("%Y-%m-%d")}')
+st.sidebar.caption('Dates beyond training period use cyclical pattern extension.')
 
 today = pd.Timestamp.now().normalize()
 date_val = st.sidebar.date_input('📅 Start date', value=today)
